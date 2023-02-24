@@ -1,0 +1,10 @@
+root = true
+
+[*]
+charset = utf-8
+indent_style = space
+indent_size = 4
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+max_line_length = off # 关掉最大行宽，其他类型的文件也可在vscode编辑器设置中的Word Wrap Column自行编辑。
