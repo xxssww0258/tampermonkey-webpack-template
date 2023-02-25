@@ -1,38 +1,32 @@
-import webpack, { Configuration } from 'webpack'
-import { merge } from 'webpack-merge'
-import { webpackBaseConfig } from './webpack.base'
+import webpack from 'webpack'
+import { webpackBaseChain } from './webpack.base'
 import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer'
 import TerserPlugin from 'terser-webpack-plugin'
 
-const webpackProdConfig: Configuration = merge(
-    {
-        mode: 'production',
-        devtool: false,
-        optimization: {
-            // minimize:false,
-            minimizer: [
-                new TerserPlugin({
-                    terserOptions: {
-                        format: {
-                            comments: true,
-                        },
-                    },
-                    // test: /webpackBootstrap/i,
-                    // exclude:/^main.user.js/
-                }),
-            ],
-            // // runtimeChunk:true,
+webpackBaseChain
+    .mode('production')
+    .optimization.minimizer('TerserPlugin')
+    .use(TerserPlugin)
+    .tap((args) => [
+        ...args,
+        {
+            terserOptions: {
+                format: {
+                    comments: true,
+                },
+                // test: /webpackBootstrap/i,
+                // exclude:/^main.user.js/
+            },
         },
-        plugins: [],
-    },
-    webpackBaseConfig
-)
+    ])
+    .end()
+
 // 判断是否有--report
 if (process.env.npm_config_report) {
-    webpackProdConfig.plugins?.push(new BundleAnalyzerPlugin())
+    webpackBaseChain.plugin('build-analyzer-plugin').use(BundleAnalyzerPlugin)
 }
 
-webpack(webpackProdConfig, function (err) {
+webpack(webpackBaseChain.toConfig(), function (err) {
     if (err) {
         console.log(err)
     }

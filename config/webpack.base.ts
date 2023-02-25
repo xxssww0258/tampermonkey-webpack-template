@@ -1,12 +1,24 @@
-import webpack, { Configuration, EntryObject } from 'webpack'
+import webpack from 'webpack'
 import path from 'path'
 import { PORT, META_STRING, isServe, MONKEY_EXT } from './index'
 import HtmlWebpackPlugin from 'html-webpack-plugin'
-import { VueLoaderPlugin } from 'vue-loader'
+import Chain from 'webpack-chain'
+import { useVueRule } from './vue-rules'
 
-export const entry: EntryObject = {
+export const webpackBaseChain = new Chain()
+interface EntryArray {
+    [index: string]: string[]
+}
+export const entry: EntryArray = {
     main: [path.resolve(__dirname, '../src/main.ts')],
 }
+// 遍历入口文件
+for (const entryName in entry) {
+    for (const entryFilePath of entry[entryName]) {
+        webpackBaseChain.entry(entryName).add(entryFilePath)
+    }
+}
+
 // 获取构建后的入口文件名
 export function getBuildedEntryFilename(): string[] {
     return Object.keys(entry).map((x) => x + `.${MONKEY_EXT}.js`) // ['main.user.js']
@@ -20,8 +32,8 @@ export function getEntryFilenameUrl(): string[] {
     )
 }
 
-// 添加js到元数据标签中
-export function addJstoMetaStr(): string {
+// 入口文件通过@require到元数据标签中
+export function entryToMetaStr(): string {
     let newMetaStr = META_STRING
     if (isServe) {
         const filenames = getEntryFilenameUrl()
@@ -35,91 +47,73 @@ export function addJstoMetaStr(): string {
     return newMetaStr
 }
 
-export const webpackBaseConfig: Configuration = {
-    entry,
-    output: {
-        clean: true,
-        filename: `[name].${MONKEY_EXT}.js`,
-        path: path.resolve(__dirname, '../dist'),
-        publicPath: '/',
-        library: {
-            type: 'global',
-        },
-    },
-    module: {
-        rules: [
-            {
-                test: /\.vue$/i,
-                exclude: /node_modules/,
-                use: [
-                    {
-                        loader: 'vue-loader',
-                        options: {},
-                    },
-                ],
-            },
-            {
-                test: /\.js$/i,
-                use: ['babel-loader'],
-                exclude: /node_modules/,
-            },
-            {
-                test: /\.ts$/i,
-                exclude: /node_modules/,
-                use: [
-                    // 'babel-loader',
-                    {
-                        loader: 'ts-loader',
-                        options: {
-                            // 关闭类型检测 提交构建速度
-                            transpileOnly: true,
-                            appendTsSuffixTo: [/\.vue$/],
-                        },
-                    },
-                ],
-            },
-            {
-                test: /\.s?css$/,
-                use: ['vue-style-loader', 'css-loader', 'sass-loader'],
-            },
-        ],
-    },
-    optimization: {
-        splitChunks: false,
-    },
-    // devtool: 'source-map',
-    devtool: false,
-    resolve: {
-        // 自动识别tsx后缀
-        extensions: [
-            '.vue',
-            //   '.tsx',
-            '.ts',
-            //   '.jsx',
-            '.js',
-        ],
-        alias: {
-            '@': path.resolve(__dirname, '../src'),
-        },
-    },
-    externals: {
-        vue: 'Vue',
-    },
-    plugins: [
-        // 基本配置
-        new HtmlWebpackPlugin({
+webpackBaseChain.output
+    .clear()
+    .filename('[name].user.js')
+    .path(path.resolve(__dirname, '../dist'))
+    .publicPath('/')
+    .end()
+
+webpackBaseChain.module
+    .rule('js')
+    .test(/\/js$/i)
+    .use('babel-loader')
+    .loader('babel-loader')
+    .end()
+    .end()
+
+webpackBaseChain.module
+    .rule('ts')
+    .test(/\.ts$/i)
+    .use('ts-loader')
+    .loader('ts-loader')
+    .options({
+        // 关闭类型检测 提交构建速度
+        transpileOnly: true,
+        // appendTsSuffixTo: [/\.vue$/],
+    })
+    .end()
+
+webpackBaseChain.module
+    .rule('css')
+    .test(/\.sc?ss$/i)
+    .use('style')
+    .loader('style-loader')
+    .end()
+    .use('css-loader')
+    .loader('css-loader')
+    .end()
+    .use('sass-loader')
+    .loader('sass-loader')
+    .end()
+
+webpackBaseChain.devtool(false)
+
+webpackBaseChain.resolve.extensions
+    .add('.js')
+    .add('.ts')
+    .end()
+    .alias.set('@', path.resolve(__dirname, '../src'))
+    .end()
+
+webpackBaseChain
+    .plugin('html-webpack-plugin')
+    .use(HtmlWebpackPlugin, [
+        {
             template: path.resolve(__dirname, '../index.html'),
-        }),
-        new webpack.DefinePlugin({
-            __VUE_OPTIONS_API__: false,
-            __VUE_PROD_DEVTOOLS__: false,
-        }),
-        new webpack.BannerPlugin({
-            banner: addJstoMetaStr(),
+        },
+    ])
+    .end()
+
+    .plugin('webpack-banner-plugin')
+    .use(webpack.BannerPlugin, [
+        {
+            banner: entryToMetaStr(),
             raw: true,
             entryOnly: true,
-        }),
-        // 没有css相关代码时不要引入，减少体积
-        new VueLoaderPlugin(),
-    ],
-}
+        },
+    ])
+    .end()
+
+// vue规则，看情况引入
+// useVueRule(webpackBaseChain)

@@ -16,6 +16,7 @@
         "@babel/core": "^7.21.0",
         "@babel/preset-env": "^7.20.2",
         "@babel/preset-typescript": "^7.21.0",
+        "@types/node": "^18.14.1",
         "@types/tampermonkey": "^4.0.10",
         "@types/webpack-bundle-analyzer": "^4.6.0",
         "@types/webpack-hot-middleware": "^2.25.6",

@@ -1,17 +1,17 @@
-import express, { RequestHandler, ErrorRequestHandler, Express } from 'express'
-import webpack, { Configuration, EntryObject } from 'webpack'
+import express, { RequestHandler, ErrorRequestHandler } from 'express'
+import webpack from 'webpack'
 import webpackDevMiddleware from 'webpack-dev-middleware'
 import webpackHotMiddleware from 'webpack-hot-middleware'
 import {
     getEntryFilenameUrl,
     getBuildedEntryFilename,
-    addJstoMetaStr,
+    entryToMetaStr,
+    entry,
 } from './webpack.base'
-import { webpackDevConfig } from './webpack.dev'
+import { webpackBaseChain } from './webpack.dev'
 // import child_process from 'child_process'
 import path from 'path'
 import { PORT } from './index'
-import { merge } from 'webpack-merge'
 
 // 如果url是dist文件返回纯元数据
 const metaMatchMiddleware: RequestHandler = (req, res, next) => {
@@ -22,34 +22,35 @@ const metaMatchMiddleware: RequestHandler = (req, res, next) => {
     )
     if (isEntryFile) {
         res.type('application/json')
-        res.send(addJstoMetaStr())
+        res.send(entryToMetaStr())
     } else {
         next()
     }
 }
 
-const serverConfig: Configuration = {
-    stats: 'errors-only',
-    plugins: [new webpack.HotModuleReplacementPlugin()],
+function serveConfigInit() {
+    webpackBaseChain.externals({})
+
+    for (const entryFile in entry) {
+        webpackBaseChain
+            .entry(entryFile)
+            // TODO：开发阶段，在第三方页面启动热刷新存在跨域问题
+            // `webpack-hot-middleware/client?reload=true&path=http://localhost:${PORT}/__webpack_hmr`
+            .prepend('webpack-hot-middleware/client?reload=true')
+    }
+    webpackBaseChain.plugin('hot').use(webpack.HotModuleReplacementPlugin)
 }
 
 export function serveRun(): void {
-    webpackDevConfig.externals = {}
-    ;((webpackDevConfig.entry as EntryObject).main as string[]).unshift(
-        // TODO：开发阶段，在第三方页面启动热刷新存在跨域问题
-        // `webpack-hot-middleware/client?reload=true&path=http://localhost:${PORT}/__webpack_hmr`
-        'webpack-hot-middleware/client?reload=true'
-    )
-    const mergeConfig = merge(webpackDevConfig, serverConfig)
-    // console.log(mergeConfig)
+    serveConfigInit()
+
     const app = express()
-    const compiler = webpack(mergeConfig)
+    const compiler = webpack(webpackBaseChain.toConfig())
 
     app.use('/meta', metaMatchMiddleware)
-
     app.use(
         webpackDevMiddleware(compiler, {
-            publicPath: webpackDevConfig.output?.publicPath,
+            publicPath: webpackBaseChain.toConfig().output?.publicPath,
         })
     )
 
