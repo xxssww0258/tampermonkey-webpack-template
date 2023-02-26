@@ -10,7 +10,8 @@ interface EntryArray {
     [index: string]: string[]
 }
 export const entry: EntryArray = {
-    main: [path.resolve(__dirname, '../src/main.ts')],
+    reactMain: [path.resolve(__dirname, '../src/react-main.tsx')],
+    // vueMain: [path.resolve(__dirname, '../src/vue-main.ts')],
 }
 // 遍历入口文件
 for (const entryName in entry) {
@@ -56,7 +57,7 @@ webpackBaseChain.output
 
 webpackBaseChain.module
     .rule('js')
-    .test(/\/js$/i)
+    .test(/\/jsx?$/i)
     .use('babel-loader')
     .loader('babel-loader')
     .end()
@@ -64,7 +65,7 @@ webpackBaseChain.module
 
 webpackBaseChain.module
     .rule('ts')
-    .test(/\.ts$/i)
+    .test(/\.tsx?$/i)
     .use('ts-loader')
     .loader('ts-loader')
     .options({
@@ -92,6 +93,8 @@ webpackBaseChain.devtool(false)
 webpackBaseChain.resolve.extensions
     .add('.js')
     .add('.ts')
+    .add('.tsx')
+    .add('.jsx')
     .end()
     .alias.set('@', path.resolve(__dirname, '../src'))
     .end()
