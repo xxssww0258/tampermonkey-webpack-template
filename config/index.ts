@@ -8,11 +8,13 @@ export const META_STRING = `// ==UserScript==
 // @author       zhangsan
 // @match        *://www.baidu.com/*
 // @icon         https://www.baidu.com/favicon.ico
-// @grant        none
+// @grant        GM_getValue
+// @grant        GM_setValue
 // @require      https://cdnjs.cloudflare.com/ajax/libs/vue/3.2.47/vue.runtime.global.prod.min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js
 `
 // 判断是否启动服务
 export const isServe = (function isServe(): boolean {
-    // console.log(process.argv)
     return process.argv.includes('serve')
 })()

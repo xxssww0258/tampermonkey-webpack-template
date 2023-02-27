@@ -11,28 +11,42 @@ export function useVueRule(webpackChain: Chain) {
         .use('vue-loader')
         .loader('vue-loader')
         .end()
+
     webpackChain.module
         .rule('css')
         .test(/\.sc?ss$/i)
+        .exclude.add(/node_modules/)
+        .end()
         .use('style')
         .loader('vue-style-loader')
         .end()
+
     webpackChain.module
-        .rule('ts')
-        .test(/\.ts$/i)
-        .use('ts-loader')
-        .tap((options) =>
-            Object.assign({}, options, {
-                appendTsSuffixTo: [/\.vue$/],
-            })
-        )
-        .end()
+        .rule('js')
+        .use('babel-loader')
+        .loader('babel-loader')
+        .options({
+            presets: [
+                [
+                    '@babel/preset-typescript',
+                    {
+                        isTSX: true,
+                        allExtensions: true,
+                    },
+                ],
+            ],
+        })
 
     webpackChain.resolve.extensions.add('.vue')
 
-    webpackChain.externals({
-        vue: 'Vue',
-    })
+    webpackChain.externals(
+        Object.assign(
+            {
+                vue: 'Vue',
+            },
+            webpackChain.get('externals')
+        )
+    )
 
     webpackChain.plugin('webpack-define-plugin').use(webpack.DefinePlugin, [
         {
