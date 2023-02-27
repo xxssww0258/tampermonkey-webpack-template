@@ -6,4 +6,3 @@ appEl.id = 'app'
 document.body.insertBefore(appEl, document.body.firstChild)
 const app: App = createApp(MyApp)
 app.mount(appEl)
-console.log('afasdf')

@@ -1,56 +1,57 @@
 import express, { RequestHandler, ErrorRequestHandler } from 'express'
-import webpack from 'webpack'
+import webpack, { Configuration } from 'webpack'
 import webpackDevMiddleware from 'webpack-dev-middleware'
 import webpackHotMiddleware from 'webpack-hot-middleware'
 import {
-    getEntryFilenameUrl,
-    getBuildedEntryFilename,
-    entryToMetaStr,
     entry,
+    getBuildedEntryFilename,
+    generateMetaBanner,
+    generateScriptUrl,
 } from './webpack.base'
 import { webpackBaseChain } from './webpack.dev'
 // import child_process from 'child_process'
-import path from 'path'
 import { PORT } from './index'
 
-// 如果url是dist文件返回纯元数据
-const metaMatchMiddleware: RequestHandler = (req, res, next) => {
-    // debugger
-    // console.log(req,res)
-    const isEntryFile = getBuildedEntryFilename().includes(
-        path.basename(req.path)
-    )
-    if (isEntryFile) {
-        res.type('application/json')
-        res.send(entryToMetaStr())
-    } else {
-        next()
-    }
-}
+const metaUrl = `http://localhost:${PORT}/meta.user.js`
 
-function serveConfigInit() {
+function serveConfigInit(): Configuration {
     webpackBaseChain.externals({})
+    webpackBaseChain.stats('errors-only')
+    webpackBaseChain.optimization.runtimeChunk('single')
 
     for (const entryFile in entry) {
-        webpackBaseChain
-            .entry(entryFile)
-            // TODO：开发阶段，在第三方页面启动热刷新存在跨域问题
+        webpackBaseChain.entry(entryFile).prepend(
+            `webpack-hot-middleware/client?reload=true`
             // `webpack-hot-middleware/client?reload=true&path=http://localhost:${PORT}/__webpack_hmr`
-            .prepend('webpack-hot-middleware/client?reload=true')
+        )
     }
     webpackBaseChain.plugin('hot').use(webpack.HotModuleReplacementPlugin)
+    const webpackConfig = webpackBaseChain.toConfig()
+    webpackConfig.module?.rules?.push({
+        test: /\.(png|svg|jpg|jpeg|gif)$/i,
+        type: 'asset/inline',
+    })
+    return webpackConfig
 }
 
 export function serveRun(): void {
-    serveConfigInit()
+    const webpackConfig = serveConfigInit()
 
     const app = express()
-    const compiler = webpack(webpackBaseChain.toConfig())
+    const compiler = webpack(webpackConfig)
 
-    app.use('/meta', metaMatchMiddleware)
+    // 仅返回油猴元数据，用于安装脚本
+    app.get('/meta.user.js', (req, res) => {
+        res.type('application/json')
+        const entryFiles = getBuildedEntryFilename()
+        // FIX: 热更新webpack-hot-middleware 存在一个bug，必须 抽离runtime,不然会报错,因此还需引入runtime
+        entryFiles.push('runtime.user.js')
+        res.send(generateMetaBanner(generateScriptUrl(entryFiles)))
+    })
+
     app.use(
         webpackDevMiddleware(compiler, {
-            publicPath: webpackBaseChain.toConfig().output?.publicPath,
+            publicPath: webpackConfig.output?.publicPath,
         })
     )
 
@@ -60,11 +61,9 @@ export function serveRun(): void {
         console.log('=================== 服务初始化成功 =====================')
 
         // 使用默认浏览器打开
-        const filenames = getEntryFilenameUrl()
-        filenames.forEach((filename) => {
-            // child_process.exec(`start ${filename}`)
-            console.log('脚本安装url:   \x1B[31m%s\x1B[0m', `${filename}`)
-        })
+        // const filenames = generateScriptUrl(getBuildedEntryFilename())
+        // 随便取一个入口文件执行
+        console.log('脚本安装url:   \x1B[31m%s\x1B[0m', `${metaUrl}`)
         console.log(
             'html调试url:   \x1B[36m%s\x1B[0m',
             `http://localhost:${PORT}/`

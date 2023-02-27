@@ -1,8 +1,10 @@
 <template>
-    <div class="dd">
-        <div>测试demo</div>
+    <div>
+        <div class="app">vue demo</div>
+        <img width="30" src="../img/avator.svg" alt="" />
         <div>{{ count }}</div>
         <button class="btn" @click="add">add</button>
+        <hr />
     </div>
 </template>
 
@@ -15,11 +17,7 @@ function add() {
 </script>
 
 <style lang="scss">
-.dd {
-    font-size: 100px;
-
-    .btn {
-        font-size: 30px;
-    }
+.app {
+    font-size: 20px;
 }
 </style>

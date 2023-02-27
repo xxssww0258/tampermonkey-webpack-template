@@ -20,9 +20,6 @@ module.exports = {
     },
     plugins: ['vue', '@typescript-eslint'],
     rules: {
-        indent: ['error', 4],
-        'linebreak-style': ['error', 'unix'],
-        quotes: ['error', 'single'],
-        semi: ['error', 'never'],
+
     },
 }

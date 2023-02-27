@@ -1,5 +1,5 @@
 import webpack from 'webpack'
-import { webpackBaseChain } from './webpack.base'
+import { useBaseRule, webpackBaseChain } from './webpack.base'
 import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer'
 import TerserPlugin from 'terser-webpack-plugin'
 
@@ -10,12 +10,11 @@ webpackBaseChain
     .tap((args) => [
         ...args,
         {
+            parallel: true,
             terserOptions: {
                 format: {
-                    comments: true,
+                    comments: /(UserScript|@).+?[^\n]$/i,
                 },
-                // test: /webpackBootstrap/i,
-                // exclude:/^main.user.js/
             },
         },
     ])
@@ -25,10 +24,12 @@ webpackBaseChain
 if (process.env.npm_config_report) {
     webpackBaseChain.plugin('build-analyzer-plugin').use(BundleAnalyzerPlugin)
 }
+const webpackConfig = webpackBaseChain.toConfig()
+useBaseRule(webpackConfig)
 
-webpack(webpackBaseChain.toConfig(), function (err) {
+webpack(webpackConfig, function (err) {
     if (err) {
-        console.log(err)
+        throw err
     }
     console.log('\n生产环境打包完成\n')
 })
